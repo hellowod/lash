@@ -73,6 +73,7 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
       const help = await run(args);
       assert.equal(help.code, 0);
       assert.match(help.stdout, /lash run <agent>/);
+      assert.match(help.stdout, /lash chat <agent>/);
       assert.match(help.stdout, /lash resume <agent>/);
       assert.match(help.stdout, /pi\s+pi --print/);
     }
@@ -115,7 +116,8 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     assert.match(add.stdout, /added fake to .*agents\.json/);
 
     const config = await readJson(projectConfig);
-    config.agents.fake.interactiveArgs = [agentScript];
+    config.agents.fake.args = [agentScript, 'one-shot'];
+    config.agents.fake.interactiveArgs = [agentScript, 'chat'];
     config.agents['codex-fake'] = {
       command: process.execPath,
       args: [],
@@ -182,11 +184,19 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     // run executes one-shot mode and interactive mode with the configured arg sets
     const launched = await run(['run', 'fake', 'hello', 'world']);
     assert.equal(launched.code, 0);
-    assert.deepEqual(await readAgentOutput(), ['hello', 'world']);
+    assert.deepEqual(await readAgentOutput(), ['one-shot', 'hello', 'world']);
 
-    const interactive = await run(['run', 'fake']);
-    assert.equal(interactive.code, 0);
-    assert.deepEqual(await readAgentOutput(), []);
+    const interactiveRun = await run(['run', 'fake']);
+    assert.equal(interactiveRun.code, 0);
+    assert.deepEqual(await readAgentOutput(), ['chat']);
+
+    const chatWithPrompt = await run(['chat', 'fake', 'hello', 'world']);
+    assert.equal(chatWithPrompt.code, 0);
+    assert.deepEqual(await readAgentOutput(), ['chat', 'hello', 'world']);
+
+    const chat = await run(['chat', 'fake']);
+    assert.equal(chat.code, 0);
+    assert.deepEqual(await readAgentOutput(), ['chat']);
 
     // create native Codex and Claude Code session stores without contacting either service
     const currentCodexId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -382,6 +392,10 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     const missingRunAgent = await run(['run']);
     assert.equal(missingRunAgent.code, 2);
     assert.match(missingRunAgent.stderr, /lash run requires an agent name/);
+
+    const missingChatAgent = await run(['chat']);
+    assert.equal(missingChatAgent.code, 2);
+    assert.match(missingChatAgent.stderr, /lash chat requires an agent name/);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

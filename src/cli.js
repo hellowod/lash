@@ -8,7 +8,8 @@ import { isSessionId, latestSession, listAgentSessions, resolveSessionRef, sortS
 export const HELP = `lash - launch any coding agent
 
 Usage:
-  lash run <agent> [args...]       Run an agent. With no args, launch it interactively.
+  lash run <agent> [args...]       Run a one-shot task; with no args, launch interactively.
+  lash chat <agent> [args...]      Start a continuous interactive chat; args are initial input.
   lash list [--json]               List available agents.
   lash sessions [agent] [--json] [--all] [--archived] [--limit N]
                                     List native agent sessions for the current directory.
@@ -36,6 +37,7 @@ User config: ~/.lash/agents.json
 Example:
   lash run codex "Refactor this function"
   lash run claude
+  lash chat codex "Start with this question"
   lash run pi "Explain this repository"
   lash add qwen -- qwen
   lash run qwen "Explain this repository"
@@ -66,8 +68,8 @@ export function parseArgv(argv) {
   if (argv[0] === '-v' || argv[0] === '--version') return { command: 'version' };
 
   const command = argv[0];
-  if (command === 'run') {
-    if (argv.length < 2) throw new UsageError('lash run requires an agent name');
+  if (command === 'run' || command === 'chat') {
+    if (argv.length < 2) throw new UsageError(`lash ${command} requires an agent name`);
     const taskArgs = argv.slice(2);
     return { command, name: argv[1], taskArgs: taskArgs[0] === '--' ? taskArgs.slice(1) : taskArgs };
   }
@@ -336,16 +338,21 @@ export function launchTarget(agent, taskArgs, launchMode = 'run', session) {
       value.replaceAll('{sessionId}', session?.id ?? '')
         .replaceAll('{id}', session?.id ?? '')
     ));
+  } else if (launchMode === 'interactive') {
+    args = agent.interactiveArgs;
   } else {
     args = taskArgs.length === 0 ? agent.interactiveArgs : agent.args;
   }
 
   if (!Array.isArray(args)) {
-    throw new Error(`agent "${agent.name}" cannot be resumed: missing ${launchMode}Args`);
+    throw new Error(`agent "${agent.name}" cannot be launched: missing arguments for ${launchMode} mode`);
   }
+
+  const directLaunch = launchMode === 'run' || launchMode === 'interactive';
+  const appendTaskArgs = directLaunch || launchMode === 'session';
   return {
-    command: launchMode === 'run' ? agent.command : sessionConfig.command ?? agent.command,
-    args: [...args, ...(launchMode === 'run' ? taskArgs : launchMode === 'session' ? taskArgs : [])],
+    command: directLaunch ? agent.command : sessionConfig.command ?? agent.command,
+    args: [...args, ...(appendTaskArgs ? taskArgs : [])],
   };
 }
 
@@ -511,6 +518,10 @@ async function execute(parsed, outputs) {
     case 'run': {
       const agent = registry.resolve(parsed.name);
       return await runAgent(agent, parsed.taskArgs);
+    }
+    case 'chat': {
+      const agent = registry.resolve(parsed.name);
+      return await runAgent(agent, parsed.taskArgs, { launchMode: 'interactive' });
     }
     default:
       throw new Error(`unknown command ${parsed.command}`);

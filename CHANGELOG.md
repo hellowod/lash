@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- Added `lash chat <agent> [args...]` for continuous interactive mode.
+- `chat` always uses `interactiveArgs`, even when an initial prompt is provided.
+
 ## 0.4.0
 
 - Added the Pi coding agent as a built-in agent.

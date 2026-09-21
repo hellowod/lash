@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { AgentRegistry, validateConfig } from '../src/agents.js';
-import { parseArgv, runAgent, runCli } from '../src/cli.js';
+import { launchTarget, parseArgv, runAgent, runCli } from '../src/cli.js';
 
 async function temporaryFiles() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lash-test-'));
@@ -84,6 +84,35 @@ test('run parser preserves task arguments', () => {
     command: 'run',
     name: 'my',
     taskArgs: ['--flag'],
+  });
+});
+
+test('chat parser preserves initial input', () => {
+  assert.deepEqual(parseArgv(['chat', 'codex', 'hello']), {
+    command: 'chat',
+    name: 'codex',
+    taskArgs: ['hello'],
+  });
+  assert.deepEqual(parseArgv(['chat', 'my', '--', '--flag', 'continue']), {
+    command: 'chat',
+    name: 'my',
+    taskArgs: ['--flag', 'continue'],
+  });
+});
+
+test('chat launch target always uses interactive arguments', () => {
+  const files = {
+    project: path.join('missing-project', 'agents.json'),
+    user: path.join('missing-user', 'agents.json'),
+  };
+  const registry = new AgentRegistry(files);
+  assert.deepEqual(launchTarget(registry.resolve('codex'), ['hello'], 'interactive'), {
+    command: 'codex',
+    args: ['hello'],
+  });
+  assert.deepEqual(launchTarget(registry.resolve('pi'), ['hello'], 'interactive'), {
+    command: 'pi',
+    args: ['hello'],
   });
 });
 

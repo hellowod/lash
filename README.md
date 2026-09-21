@@ -4,7 +4,7 @@
 
 ```bash
 lash run codex "重构这个函数"
-lash run claude
+lash chat codex
 lash run my-agent -- --verbose "分析当前项目"
 ```
 
@@ -49,6 +49,33 @@ npm install --global @earendil-works/pi-coding-agent
 lash run codex "重构这个函数"
 lash run claude "帮我排查测试失败"
 lash run pi "解释这个仓库的架构"
+lash chat codex "从这个任务开始，进入持续对话"
+```
+
+## 一次性任务与持续对话
+
+`run` 适合明确的一次性任务：带任务参数时会使用智能体的 `args`，例如 Codex 会走 `codex exec`：
+
+```bash
+lash run codex "重构这个函数"
+lash run claude "帮我排查测试失败"
+lash run pi "解释这个仓库的架构"
+```
+
+`chat` 会强制进入持续交互对话，并始终使用智能体的 `interactiveArgs`。即使提供初始提示词，也不会切换到一次性任务模式：
+
+```bash
+lash chat codex
+lash chat codex "hello"
+lash chat claude
+lash chat pi "先分析这个项目"
+```
+
+继续旧会话请使用 `resume`，不要把 `chat` 和会话恢复混在一起：
+
+```bash
+lash resume codex --last
+lash resume codex --last "继续刚才的任务"
 ```
 
 ## 添加任意智能体
@@ -79,7 +106,7 @@ lash add qwen --user -- qwen --profile coding
 }
 ```
 
-`args` 会出现在 lash 收到的任务参数之前；`interactiveArgs` 则用于 `lash run qwen` 不带任务参数的场景。
+`args` 会出现在 lash 收到的任务参数之前；`interactiveArgs` 用于 `lash run qwen` 不带任务参数的场景，以及所有 `lash chat qwen` 调用。
 
 ## 继承和覆盖已有智能体
 
@@ -239,6 +266,7 @@ lash resume qwen 11111111-1111-4111-8111-111111111111
 ## 常用命令
 
 ```bash
+lash chat codex        # 开启持续交互对话
 lash list              # 查看所有智能体
 lash show codex-safe   # 查看解析后的完整定义
 lash path              # 项目配置路径
