@@ -168,6 +168,32 @@ test('add parser supports agent arguments and user scope', () => {
   });
 });
 
+test('runAgent keeps Git Bash launches in the inherited MSYS shell', async () => {
+  if (process.platform !== 'win32') return;
+
+  const shell = 'C:/Program Files/Git/usr/bin/bash.exe';
+  try { await fs.access(shell); } catch { return; }
+
+  const previousMsystem = process.env.MSYSTEM;
+  const previousShell = process.env.SHELL;
+  process.env.MSYSTEM = 'MINGW64';
+  process.env.SHELL = shell;
+  try {
+    const code = await runAgent({
+      command: process.execPath,
+      args: [],
+      interactiveArgs: [],
+      env: {},
+    }, ['-e', 'process.exit(42)'], { stdio: 'inherit' });
+    assert.equal(code, 42);
+  } finally {
+    if (previousMsystem === undefined) delete process.env.MSYSTEM;
+    else process.env.MSYSTEM = previousMsystem;
+    if (previousShell === undefined) delete process.env.SHELL;
+    else process.env.SHELL = previousShell;
+  }
+});
+
 test('runAgent launches a configured command and returns its exit code', async () => {
   const code = await runAgent({
     command: process.execPath,

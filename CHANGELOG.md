@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- Fixed agent output compatibility in Git Bash / MSYS by launching inherited interactive agents through the active bash shell instead of npm's `.cmd` shim.
+
 ## 0.5.1
 
 - Improved Codex continuous chat mode by using native inline rendering with `--no-alt-screen`.

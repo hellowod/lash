@@ -1,6 +1,6 @@
 {
   "name": "lashhub",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A tiny CLI launcher that routes tasks to Codex, Claude Code, Pi, or any agent you configure.",
   "type": "module",
   "main": "./src/index.js",

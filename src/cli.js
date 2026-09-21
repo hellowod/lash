@@ -356,13 +356,35 @@ export function launchTarget(agent, taskArgs, launchMode = 'run', session) {
   };
 }
 
+function inheritedMsysShell(stdio) {
+  if (process.platform !== 'win32' || stdio !== 'inherit' || process.env.MSYSTEM === undefined) return undefined;
+
+  const shell = process.env.SHELL;
+  if (typeof shell !== 'string' || shell === '') return undefined;
+  try {
+    return fs.statSync(shell).isFile() ? shell : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function runAgent(agent, taskArgs, { cwd = process.cwd(), stdio = 'inherit', launchMode = 'run', session } = {}) {
   const target = launchTarget(agent, taskArgs, launchMode, session);
-  const child = spawn(target.command, [...target.args], {
-    cwd: agent.cwd ?? cwd,
-    env: { ...process.env, ...agent.env },
-    stdio,
-  });
+  const msysShell = inheritedMsysShell(stdio);
+
+  // npm's Unix launchers work more reliably than their .cmd counterparts when a
+  // Git Bash/MSYS terminal is inherited. Using exec preserves argument boundaries.
+  const child = msysShell !== undefined
+    ? spawn(msysShell, ['-lc', 'exec "$@"', '--', target.command, ...target.args], {
+      cwd: agent.cwd ?? cwd,
+      env: { ...process.env, ...agent.env },
+      stdio,
+    })
+    : spawn(target.command, [...target.args], {
+      cwd: agent.cwd ?? cwd,
+      env: { ...process.env, ...agent.env },
+      stdio,
+    });
 
   return new Promise((resolve, reject) => {
     child.once('error', reject);
