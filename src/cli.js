@@ -26,7 +26,7 @@ Usage:
   lash --version                   Print the version.
 
 Built-in agents:
-  codex                            codex exec --skip-git-repo-check --color never [args...] / interactive codex
+  codex                            codex exec --skip-git-repo-check --color never [args...] / interactive codex --no-alt-screen
   claude                           claude [args...]
   pi                               pi --print [args...] / interactive pi
 

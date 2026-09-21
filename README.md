@@ -39,7 +39,7 @@ npm install --global @earendil-works/pi-coding-agent
 
 | 名称 | 带任务参数时 | 不带参数时 |
 | --- | --- | --- |
-| `codex` | `codex exec --skip-git-repo-check --color never <args...>` | `codex` |
+| `codex` | `codex exec --skip-git-repo-check --color never <args...>` | `codex --no-alt-screen` |
 | `claude` | `claude <args...>` | `claude` |
 | `pi` | `pi --print <args...>` | `pi` |
 
@@ -290,7 +290,7 @@ console.log(registry.resolve('codex'));
 
 ## 设计边界
 
-`lash` 不包裹、不截获、不改写智能体输出。任务参数会原样追加到目标命令后面，进程直接继承当前终端，所以交互模式、颜色、进度和退出码都能正常工作。Windows 上的 `.cmd` / `.bat` 启动由 `cross-spawn` 处理。
+`lash` 不包裹、不截获、不改写智能体输出。任务参数会原样追加到目标命令后面，进程直接继承当前终端，所以交互模式、颜色、进度和退出码都能正常工作。Codex 的持续对话使用原生 `--no-alt-screen` 模式，保留滚动历史并展示原生颜色；一次性任务仍强制 `--color never`。Windows 上的 `.cmd` / `.bat` 启动由 `cross-spawn` 处理。
 
 ## 项目结构
 

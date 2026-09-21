@@ -8,8 +8,8 @@ export const BUILTIN_AGENTS = Object.freeze({
   codex: Object.freeze({
     command: 'codex',
     args: ['exec', '--skip-git-repo-check', '--color', 'never'],
-    interactiveArgs: [],
-    env: { NO_COLOR: '1' },
+    interactiveArgs: ['--no-alt-screen'],
+    env: {},
     description: 'OpenAI Codex CLI (one-shot task mode)',
     session: Object.freeze({
       provider: 'codex',

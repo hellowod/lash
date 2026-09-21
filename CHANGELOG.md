@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Improved Codex continuous chat mode by using native inline rendering with `--no-alt-screen`.
+- Removed the global `NO_COLOR` override for Codex so interactive mode keeps its native styling.
+
 ## 0.5.0
 
 - Added `lash chat <agent> [args...]` for continuous interactive mode.

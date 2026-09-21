@@ -21,7 +21,10 @@ test('built-in agents resolve to codex exec, claude, and pi', () => {
     userPath: path.join('missing-user', 'agents.json'),
   });
 
-  assert.deepEqual(registry.resolve('codex').args, ['exec', '--skip-git-repo-check', '--color', 'never']);
+  const codex = registry.resolve('codex');
+  assert.deepEqual(codex.args, ['exec', '--skip-git-repo-check', '--color', 'never']);
+  assert.deepEqual(codex.interactiveArgs, ['--no-alt-screen']);
+  assert.deepEqual(codex.env, {});
   assert.deepEqual(registry.resolve('claude').args, []);
   assert.deepEqual(registry.resolve('pi').args, ['--print']);
   assert.deepEqual(registry.resolve('pi').session.resumeArgs, ['--session', '{sessionId}']);
@@ -108,7 +111,7 @@ test('chat launch target always uses interactive arguments', () => {
   const registry = new AgentRegistry(files);
   assert.deepEqual(launchTarget(registry.resolve('codex'), ['hello'], 'interactive'), {
     command: 'codex',
-    args: ['hello'],
+    args: ['--no-alt-screen', 'hello'],
   });
   assert.deepEqual(launchTarget(registry.resolve('pi'), ['hello'], 'interactive'), {
     command: 'pi',
