@@ -1,0 +1,47 @@
+{
+  "name": "lashhub",
+  "version": "0.3.0",
+  "description": "A tiny CLI launcher that routes tasks to Codex, Claude Code, or any agent you configure.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "codex",
+    "claude",
+    "claude-code",
+    "launcher",
+    "developer-tools"
+  ],
+  "bin": {
+    "lash": "src/lash.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "npm test && npm pack --dry-run",
+    "install:global": "node scripts/install-global.mjs",
+    "prepublishOnly": "npm run check"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.6"
+  },
+  "repository": {
+    "url": "git+https://github.com/hellowod/lash.git",
+    "type": "git"
+  },
+  "bugs": {
+    "url": "https://github.com/hellowod/lash/issues"
+  },
+  "homepage": "https://github.com/hellowod/lash#readme"
+}
