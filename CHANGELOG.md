@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Added the Pi coding agent as a built-in agent.
+- Added native Pi session discovery from `~/.pi/agent/sessions`.
+- Added Pi resume support through `pi --session <id>`.
+
 ## 0.3.2
 
 - Fixed `--user` handling for `lash path`, `lash init`, and `lash remove`.

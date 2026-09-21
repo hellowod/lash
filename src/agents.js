@@ -38,6 +38,18 @@ export const BUILTIN_AGENTS = Object.freeze({
       resumeArgs: ['--resume', '{sessionId}'],
     }),
   }),
+  pi: Object.freeze({
+    command: 'pi',
+    args: ['--print'],
+    interactiveArgs: [],
+    description: 'Pi coding agent (one-shot task mode)',
+    session: Object.freeze({
+      provider: 'pi',
+      pickerArgs: ['--resume'],
+      lastArgs: ['--continue'],
+      resumeArgs: ['--session', '{sessionId}'],
+    }),
+  }),
 });
 
 const AGENT_KEYS = new Set([
@@ -62,7 +74,7 @@ const SESSION_KEYS = new Set([
   'execResumeArgs',
 ]);
 
-const SESSION_PROVIDERS = new Set(['codex', 'claude', 'manual']);
+const SESSION_PROVIDERS = new Set(['codex', 'claude', 'pi', 'manual']);
 
 function readJson(filePath) {
   let content;

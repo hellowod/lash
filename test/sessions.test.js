@@ -89,6 +89,38 @@ test('claude session provider reads project jsonl sessions', async () => {
   });
 });
 
+test('pi session provider reads named project sessions', async () => {
+  const home = await temporaryHome();
+  const cwd = path.join(path.sep, 'workspace', 'pi-project');
+  const sessionRoot = path.join(home, '.pi', 'agent', 'sessions');
+  const projectDir = path.join(sessionRoot, '--workspace-pi-project--');
+  await fs.mkdir(projectDir, { recursive: true });
+  const id = '44444444-4444-4444-8444-444444444444';
+  const sessionFile = path.join(projectDir, `2026-09-21T03-45-00-000Z_${id}.jsonl`);
+  await fs.writeFile(sessionFile, [
+    JSON.stringify({ type: 'session', version: 3, id, cwd, timestamp: '2026-09-21T03:45:00Z' }),
+    JSON.stringify({ type: 'session_info', name: 'pi integration task' }),
+    JSON.stringify({
+      type: 'message',
+      message: { role: 'user', content: [{ type: 'text', text: 'first prompt' }] },
+    }),
+    '',
+  ].join('\n'));
+
+  await withEnvironment({ PI_CODING_AGENT_SESSION_DIR: sessionRoot }, async () => {
+    const sessions = await listAgentSessions(BUILTIN_AGENTS.pi, { cwd });
+    assert.equal(sessions.length, 1);
+    assert.equal(sessions[0].id, id);
+    assert.equal(sessions[0].title, 'pi integration task');
+    assert.equal(sessions[0].kind, 'interactive');
+    assert.equal(resolveSessionRef(sessions, 'pi integration task').id, id);
+    assert.deepEqual(
+      launchTarget(BUILTIN_AGENTS.pi, ['continue'], 'session', sessions[0]).args,
+      ['--session', id, 'continue'],
+    );
+  });
+});
+
 test('manual session providers list no sessions but accept UUID resume ids', async () => {
   const agent = {
     name: 'custom',

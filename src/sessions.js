@@ -25,6 +25,17 @@ function claudeConfigDir(home) {
     : path.join(os.homedir(), '.claude');
 }
 
+function piSessionRoot(home) {
+  if (home !== undefined) return path.join(home, '.pi', 'agent', 'sessions');
+  if (process.env.PI_CODING_AGENT_SESSION_DIR) {
+    return path.resolve(process.env.PI_CODING_AGENT_SESSION_DIR);
+  }
+  if (process.env.PI_CODING_AGENT_DIR) {
+    return path.join(path.resolve(process.env.PI_CODING_AGENT_DIR), 'sessions');
+  }
+  return path.join(os.homedir(), '.pi', 'agent', 'sessions');
+}
+
 function walkFiles(root) {
   const files = [];
 
@@ -195,6 +206,40 @@ async function listClaudeSessions({ cwd, all, home }) {
   return sessions.filter((session) => (all || samePath(session.cwd ?? '', cwd)));
 }
 
+async function listPiSessions({ cwd, all, home }) {
+  const sessions = [];
+
+  for (const filePath of walkFiles(piSessionRoot(home))) {
+    const records = await readSessionHead(filePath);
+    const header = records.find((record) => record?.type === 'session');
+    if (typeof header?.id !== 'string' || header.id === '') continue;
+
+    const name = records
+      .filter((record) => record?.type === 'session_info' && typeof record.name === 'string')
+      .at(-1)?.name;
+    const firstUser = records.find((record) => (
+      record?.type === 'message'
+      && record?.message?.role === 'user'
+    ))?.message;
+    const stat = fs.statSync(filePath);
+
+    sessions.push({
+      id: header.id.toLowerCase(),
+      agent: 'pi',
+      provider: 'pi',
+      title: normalizeTitle(name ?? messageText(firstUser?.content)),
+      cwd: header.cwd,
+      createdAt: header.timestamp ?? stat.birthtime.toISOString(),
+      updatedAt: stat.mtime.toISOString(),
+      kind: 'interactive',
+      archived: false,
+      source: filePath,
+    });
+  }
+
+  return sessions.filter((session) => (all || samePath(session.cwd ?? '', cwd)));
+}
+
 export async function listAgentSessions(agent, {
   cwd = process.cwd(),
   all = false,
@@ -204,10 +249,11 @@ export async function listAgentSessions(agent, {
   const provider = agent?.session?.provider;
   if (provider === 'codex') return listCodexSessions({ cwd, all, archived, home });
   if (provider === 'claude') return listClaudeSessions({ cwd, all, home });
+  if (provider === 'pi') return listPiSessions({ cwd, all, home });
   if (provider === 'manual') return [];
   throw new SessionError(
     `agent "${agent?.name ?? 'unknown'}" does not define session.provider; `
-    + 'set it to codex, claude, or manual in its config',
+    + 'set it to codex, claude, pi, or manual in its config',
   );
 }
 
@@ -244,9 +290,3 @@ export function resolveSessionRef(sessions, reference) {
 export function latestSession(sessions) {
   return sortSessions(sessions)[0];
 }
-
-
-
-
-
-

@@ -29,6 +29,7 @@ async function makeIntegrationRoot() {
     home: path.join(root, 'home'),
     codexHome: path.join(root, 'home', '.codex'),
     claudeConfig: path.join(root, 'home', '.claude'),
+    piSessionRoot: path.join(root, 'home', '.pi', 'agent', 'sessions'),
   };
 }
 
@@ -37,7 +38,7 @@ async function readJson(filePath) {
 }
 
 test('integrated CLI commands cover configuration, execution, and sessions', async () => {
-  const { root, workspace, home, codexHome, claudeConfig } = await makeIntegrationRoot();
+  const { root, workspace, home, codexHome, claudeConfig, piSessionRoot } = await makeIntegrationRoot();
   await fs.mkdir(workspace, { recursive: true });
   await fs.mkdir(home, { recursive: true });
 
@@ -47,6 +48,7 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     USERPROFILE: home,
     CODEX_HOME: codexHome,
     CLAUDE_CONFIG_DIR: claudeConfig,
+    PI_CODING_AGENT_SESSION_DIR: piSessionRoot,
   };
   const runCliProcess = promisifyExecFile();
   const run = async (args) => runCliProcess(process.execPath, [cliEntry, ...args], {
@@ -72,6 +74,7 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
       assert.equal(help.code, 0);
       assert.match(help.stdout, /lash run <agent>/);
       assert.match(help.stdout, /lash resume <agent>/);
+      assert.match(help.stdout, /pi\s+pi --print/);
     }
     for (const args of [['-v'], ['--version']]) {
       const version = await run(args);
@@ -134,6 +137,16 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
         resumeArgs: [agentScript, 'resume', '{sessionId}'],
       },
     };
+    config.agents['pi-fake'] = {
+      command: process.execPath,
+      args: [],
+      interactiveArgs: [agentScript],
+      session: {
+        provider: 'pi',
+        pickerArgs: [agentScript, 'picker'],
+        resumeArgs: [agentScript, 'pi-resume', '{sessionId}'],
+      },
+    };
     config.agents.manual = {
       command: process.execPath,
       args: [],
@@ -156,6 +169,7 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     const listed = JSON.parse((await run(['list', '--json'])).stdout);
     assert.ok(listed.some((agent) => agent.name === 'codex' && agent.source === 'built-in'));
     assert.ok(listed.some((agent) => agent.name === 'claude' && agent.source === 'built-in'));
+    assert.ok(listed.some((agent) => agent.name === 'pi' && agent.source === 'built-in'));
     assert.ok(listed.some((agent) => agent.name === 'fake' && agent.source === 'project'));
     assert.ok(listed.some((agent) => agent.name === 'manual' && agent.source === 'project'));
 
@@ -179,6 +193,7 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     const otherCodexId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
     const archivedCodexId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
     const claudeId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const piId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
     const codexIndex = [
       { id: currentCodexId, thread_name: 'codex integration task', updated_at: '2026-09-21T04:01:00Z' },
       { id: otherCodexId, thread_name: 'codex other directory', updated_at: '2026-09-21T05:00:00Z' },
@@ -245,14 +260,37 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     const claudeTime = new Date('2026-09-21T03:30:00Z');
     await fs.utimes(claudeFile, claudeTime, claudeTime);
 
+    const piProjectDir = path.join(piSessionRoot, '--lash-integration-pi--');
+    await fs.mkdir(piProjectDir, { recursive: true });
+    const piFile = path.join(piProjectDir, `2026-09-21T03-45-00-000Z_${piId}.jsonl`);
+    await fs.writeFile(piFile, [
+      JSON.stringify({
+        type: 'session',
+        version: 3,
+        id: piId,
+        cwd: workspace,
+        timestamp: '2026-09-21T03:45:00Z',
+      }),
+      JSON.stringify({ type: 'session_info', name: 'pi integration task' }),
+      JSON.stringify({
+        type: 'message',
+        message: { role: 'user', content: [{ type: 'text', text: 'native pi prompt' }] },
+      }),
+      ''
+    ].join('\n'));
+    const piTime = new Date('2026-09-21T03:45:00Z');
+    await fs.utimes(piFile, piTime, piTime);
+
     // sessions combine providers, filter by cwd, and support all documented filters
     const defaultSessions = JSON.parse((await run(['sessions', '--json'])).stdout);
-    assert.equal(defaultSessions.length, 2);
+    assert.equal(defaultSessions.length, 3);
     assert.equal(defaultSessions[0].id, currentCodexId);
     assert.equal(defaultSessions[0].title, 'codex integration task');
     assert.equal(defaultSessions[0].kind, 'exec');
-    assert.equal(defaultSessions[1].id, claudeId);
-    assert.equal(defaultSessions[1].title, 'claude integration task');
+    assert.equal(defaultSessions[1].id, piId);
+    assert.equal(defaultSessions[1].title, 'pi integration task');
+    assert.equal(defaultSessions[2].id, claudeId);
+    assert.equal(defaultSessions[2].title, 'claude integration task');
 
     const codexSessions = JSON.parse((await run(['sessions', 'codex-fake', '--json'])).stdout);
     assert.equal(codexSessions.length, 1);
@@ -262,12 +300,14 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     assert.deepEqual(allSessions.map((session) => session.id), [
       otherCodexId,
       currentCodexId,
+      piId,
       claudeId,
     ]);
 
     const archivedSessions = JSON.parse((await run(['sessions', '--archived', '--json'])).stdout);
     assert.deepEqual(archivedSessions.map((session) => session.id), [
       currentCodexId,
+      piId,
       claudeId,
       archivedCodexId,
     ]);
@@ -279,6 +319,8 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
 
     const last = JSON.parse((await run(['last', '--json'])).stdout);
     assert.equal(last.id, currentCodexId);
+    const lastPi = JSON.parse((await run(['last', 'pi-fake', '--json'])).stdout);
+    assert.equal(lastPi.id, piId);
     const lastClaude = JSON.parse((await run(['last', 'claude-fake', '--json'])).stdout);
     assert.equal(lastClaude.id, claudeId);
     const lastAll = JSON.parse((await run(['last', 'codex-fake', '--all', '--json'])).stdout);
@@ -313,6 +355,9 @@ test('integrated CLI commands cover configuration, execution, and sessions', asy
     assert.equal(archivedResume.code, 0);
     assert.deepEqual(await readAgentOutput(), ['interactive-resume', archivedCodexId, 'continue archived']);
 
+    const piResume = await run(['resume', 'pi-fake', piId, 'continue pi']);
+    assert.equal(piResume.code, 0);
+    assert.deepEqual(await readAgentOutput(), ['pi-resume', piId, 'continue pi']);
     const claudeResume = await run(['resume', 'claude-fake', claudeId, 'continue claude']);
     assert.equal(claudeResume.code, 0);
     assert.deepEqual(await readAgentOutput(), ['resume', claudeId, 'continue claude']);

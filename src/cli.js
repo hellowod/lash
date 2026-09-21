@@ -27,6 +27,7 @@ Usage:
 Built-in agents:
   codex                            codex exec --skip-git-repo-check --color never [args...] / interactive codex
   claude                           claude [args...]
+  pi                               pi --print [args...] / interactive pi
 
 Config precedence: built-in < user < project.
 Project config: .lash/agents.json
@@ -35,6 +36,7 @@ User config: ~/.lash/agents.json
 Example:
   lash run codex "Refactor this function"
   lash run claude
+  lash run pi "Explain this repository"
   lash add qwen -- qwen
   lash run qwen "Explain this repository"
 
@@ -272,7 +274,9 @@ function sessionAgents(registry, name) {
   if (name !== undefined) return [registry.resolve(name)];
   return registry.names()
     .map((agentName) => registry.resolve(agentName))
-    .filter((agent) => agent.session?.provider === 'codex' || agent.session?.provider === 'claude');
+    .filter((agent) => agent.session?.provider === 'codex'
+      || agent.session?.provider === 'claude'
+      || agent.session?.provider === 'pi');
 }
 
 async function loadSessions(registry, options) {
@@ -535,13 +539,3 @@ export async function main(argv) {
 }
 
 export { AgentRegistry, defaultProjectPath, defaultUserPath };
-
-
-
-
-
-
-
-
-
-

@@ -15,7 +15,7 @@ async function temporaryFiles() {
   };
 }
 
-test('built-in agents resolve to codex exec and claude', () => {
+test('built-in agents resolve to codex exec, claude, and pi', () => {
   const registry = new AgentRegistry({
     projectPath: path.join('missing-project', 'agents.json'),
     userPath: path.join('missing-user', 'agents.json'),
@@ -23,6 +23,8 @@ test('built-in agents resolve to codex exec and claude', () => {
 
   assert.deepEqual(registry.resolve('codex').args, ['exec', '--skip-git-repo-check', '--color', 'never']);
   assert.deepEqual(registry.resolve('claude').args, []);
+  assert.deepEqual(registry.resolve('pi').args, ['--print']);
+  assert.deepEqual(registry.resolve('pi').session.resumeArgs, ['--session', '{sessionId}']);
 });
 
 test('project agents override user agents and can inherit built-ins', async () => {
@@ -150,9 +152,3 @@ test('CLI list emits valid JSON', async () => {
   const parsed = JSON.parse(lines.join('\n'));
   assert.ok(parsed.some((agent) => agent.name === 'codex'));
 });
-
-
-
-
-
-

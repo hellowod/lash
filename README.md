@@ -1,6 +1,6 @@
 # lash
 
-`lash` 是一个极简的智能体启动器：用同一条命令把任务交给 Codex、Claude Code 或任何你自己配置的 CLI 智能体。
+`lash` 是一个极简的智能体启动器：用同一条命令把任务交给 Codex、Claude Code、Pi 或任何你自己配置的 CLI 智能体。
 
 ```bash
 lash run codex "重构这个函数"
@@ -29,18 +29,26 @@ npm run install:global
 
 需要 Node.js 20 或更新版本。
 
+`lash` 只负责启动和恢复智能体，不负责安装智能体本体。Pi 需要单独安装：
+
+```bash
+npm install --global @earendil-works/pi-coding-agent
+```
+
 ## 内置智能体
 
 | 名称 | 带任务参数时 | 不带参数时 |
 | --- | --- | --- |
 | `codex` | `codex exec --skip-git-repo-check --color never <args...>` | `codex` |
 | `claude` | `claude <args...>` | `claude` |
+| `pi` | `pi --print <args...>` | `pi` |
 
-因此下面两条命令都直接可用：
+因此下面这些命令都直接可用：
 
 ```bash
 lash run codex "重构这个函数"
 lash run claude "帮我排查测试失败"
+lash run pi "解释这个仓库的架构"
 ```
 
 ## 添加任意智能体
@@ -85,6 +93,9 @@ lash add qwen --user -- qwen --profile coding
       "appendArgs": ["--sandbox", "workspace-write"],
       "description": "Codex with workspace-write sandbox"
     },
+    "pi-coding": {
+      "extends": "pi"
+    },
     "claude-code": {
       "extends": "claude"
     },
@@ -114,7 +125,7 @@ lash add qwen --user -- qwen --profile coding
 
 ## 会话管理
 
-`lash` 内置了 Codex 和 Claude Code 的原生会话读取与恢复能力。默认只显示当前目录的会话，避免不同项目之间的历史互相干扰。
+`lash` 内置了 Codex、Claude Code 和 Pi 的原生会话读取与恢复能力。默认只显示当前目录的会话，避免不同项目之间的历史互相干扰。
 
 ### 查看当前目录会话
 
@@ -122,6 +133,7 @@ lash add qwen --user -- qwen --profile coding
 lash sessions
 lash sessions codex
 lash sessions claude
+lash sessions pi
 ```
 
 输出示例：
@@ -147,6 +159,7 @@ lash last
 lash last codex
 lash last codex --json
 lash last codex --all
+lash last pi
 ```
 
 ### 恢复会话
@@ -156,6 +169,7 @@ lash last codex --all
 ```bash
 lash resume codex
 lash resume claude
+lash resume pi
 ```
 
 恢复当前目录最近一次会话：
@@ -163,8 +177,10 @@ lash resume claude
 ```bash
 lash resume codex --last
 lash resume claude --last
+lash resume pi --last
 lash resume codex --last "继续刚才的任务"
 lash resume claude --last "继续刚才的任务"
+lash resume pi --last "继续刚才的任务"
 ```
 
 按 `lash sessions` 输出的序号恢复：
@@ -172,6 +188,7 @@ lash resume claude --last "继续刚才的任务"
 ```bash
 lash resume codex 1
 lash resume claude 2 "继续刚才的任务"
+lash resume pi 3 "继续刚才的任务"
 ```
 
 也可以使用完整 ID、ID 前缀或标题：
@@ -188,7 +205,7 @@ lash resume codex "实现 lash 智能体 CLI"
 lash resume codex --all 01a0c31c-f941-7f30-8204-5d44d73c3d4c
 ```
 
-Codex 的交互式会话会使用 `codex resume <id>` 恢复；`codex exec` 产生的一次性任务会自动改用 `codex exec ... resume <id>` 恢复。Claude Code 会使用 `claude --resume <id>` 恢复。
+Codex 的交互式会话会使用 `codex resume <id>` 恢复；`codex exec` 产生的一次性任务会自动改用 `codex exec ... resume <id>` 恢复。Claude Code 会使用 `claude --resume <id>` 恢复；Pi 会使用 `pi --session <id>` 恢复。
 
 ### 自定义智能体的会话恢复
 
@@ -217,7 +234,8 @@ lash resume qwen
 lash resume qwen 11111111-1111-4111-8111-111111111111
 ```
 
-`manual` 表示 `lash` 不负责枚举该智能体的历史文件，但可以把已知 UUID 传给它的 resume 参数。继承 `codex` 或 `claude` 的自定义智能体会同时继承它们的会话配置。
+`manual` 表示 `lash` 不负责枚举该智能体的历史文件，但可以把已知 UUID 传给它的 resume 参数。继承 `codex`、`claude` 或 `pi` 的自定义智能体会同时继承它们的会话配置。
+
 ## 常用命令
 
 ```bash
@@ -249,8 +267,7 @@ console.log(registry.resolve('codex'));
 ## 项目结构
 
 ```text
-bin/        CLI 可执行入口，保持非常薄
-src/        核心源码和公开 API
+src/        核心源码、CLI 可执行入口和公开 API
 test/       Node.js 内置测试
 scripts/    开发辅助脚本
 ```
@@ -271,9 +288,3 @@ npm publish --registry=https://registry.npmjs.org
 ```
 
 MIT License.
-
-
-
-
-
-
