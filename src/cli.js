@@ -229,7 +229,7 @@ function parseResumeOptions(values) {
 function parseScope(values) {
   const scopes = values.filter((value) => value === '--user' || value === '--project');
   if (scopes.length > 1) throw new UsageError('choose only one of --user or --project');
-  return scopes[0] ?? 'project';
+  return scopes[0]?.slice(2) ?? 'project';
 }
 
 function configPath(scope, registry) {
@@ -283,7 +283,11 @@ async function loadSessions(registry, options) {
       archived: options.archived,
     })
   )));
-  return sortSessions(groups.flat());
+  const unique = new Map();
+  for (const session of groups.flat()) {
+    unique.set(`${session.provider}:${session.id}`, session);
+  }
+  return sortSessions([...unique.values()]);
 }
 
 function formatTime(value) {

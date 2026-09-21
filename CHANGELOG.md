@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Fixed `--user` handling for `lash path`, `lash init`, and `lash remove`.
+- Deduplicated native sessions when multiple configured agents use the same session provider.
+- Added end-to-end integration coverage for every public CLI command.
+
 ## 0.3.1
 
 - Fixed `lash resume <agent> --last <prompt>` so text after `--last` is treated as a prompt, not a session reference.
@@ -11,6 +17,7 @@
 - Added current-directory filtering plus `--all`, `--archived`, `--limit`, and `--json`.
 - Added resumable session references by index, ID, ID prefix, or title.
 - Added configurable session resume support for custom agents.
+
 ## 0.2.0
 
 - Moved all source files, including the CLI entry point, under `src/`.
@@ -24,7 +31,3 @@
 - Initial CLI with built-in Codex and Claude Code agents.
 - Project and user agent configuration.
 - Agent inheritance and overrides.
-
-
-
-

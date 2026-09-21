@@ -1,6 +1,6 @@
 {
   "name": "lashhub",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A tiny CLI launcher that routes tasks to Codex, Claude Code, or any agent you configure.",
   "type": "module",
   "main": "./src/index.js",
@@ -45,4 +45,3 @@
   },
   "homepage": "https://github.com/hellowod/lash#readme"
 }
-
