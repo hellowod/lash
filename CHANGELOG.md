@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Fixed `lash resume <agent> --last <prompt>` so text after `--last` is treated as a prompt, not a session reference.
+
 ## 0.3.0
 
 - Added native session discovery for Codex and Claude Code.
@@ -20,5 +24,7 @@
 - Initial CLI with built-in Codex and Claude Code agents.
 - Project and user agent configuration.
 - Agent inheritance and overrides.
+
+
 
 

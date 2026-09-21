@@ -40,7 +40,7 @@ Example:
 
 Session examples:
   lash sessions codex
-  lash resume codex --last
+  lash resume codex --last "Continue this task"
   lash resume codex 1 "Continue this task"
   lash resume claude <session-id> "Continue"
 `;
@@ -188,6 +188,8 @@ function parseResumeOptions(values) {
     reference: undefined,
     taskArgs: [],
   };
+  const positional = [];
+  const afterDelimiterArgs = [];
   let afterDelimiter = false;
 
   for (const value of values) {
@@ -210,15 +212,17 @@ function parseResumeOptions(values) {
     if (!afterDelimiter && value.startsWith('--')) {
       throw new UsageError(`unknown resume option "${value}"`);
     }
-    if (options.reference === undefined && !afterDelimiter) {
-      options.reference = value;
-      continue;
-    }
-    options.taskArgs.push(value);
+    if (afterDelimiter) afterDelimiterArgs.push(value);
+    else positional.push(value);
   }
 
-  if (options.last && options.reference !== undefined) {
-    throw new UsageError('choose either --last or an explicit session reference, not both');
+  if (options.last) {
+    options.taskArgs = [...positional, ...afterDelimiterArgs];
+  } else if (positional.length > 0) {
+    [options.reference] = positional;
+    options.taskArgs = [...positional.slice(1), ...afterDelimiterArgs];
+  } else {
+    options.taskArgs = afterDelimiterArgs;
   }
   return options;
 }
@@ -527,6 +531,7 @@ export async function main(argv) {
 }
 
 export { AgentRegistry, defaultProjectPath, defaultUserPath };
+
 
 
 

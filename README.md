@@ -163,6 +163,8 @@ lash resume claude
 ```bash
 lash resume codex --last
 lash resume claude --last
+lash resume codex --last "继续刚才的任务"
+lash resume claude --last "继续刚才的任务"
 ```
 
 按 `lash sessions` 输出的序号恢复：
@@ -269,6 +271,8 @@ npm publish --registry=https://registry.npmjs.org
 ```
 
 MIT License.
+
+
 
 
 

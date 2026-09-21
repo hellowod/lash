@@ -115,6 +115,15 @@ test('resume command parser separates session reference from task args', () => {
     reference: undefined,
     taskArgs: [],
   });
+  assert.deepEqual(parseArgv(['resume', 'codex', '--last', '现在很不错']), {
+    command: 'resume',
+    name: 'codex',
+    last: true,
+    all: false,
+    archived: false,
+    reference: undefined,
+    taskArgs: ['现在很不错'],
+  });
 });
 test('add parser supports agent arguments and user scope', () => {
   assert.deepEqual(parseArgv(['add', 'qwen', '--user', '--', 'qwen', '--profile', 'coding']), {
@@ -141,6 +150,7 @@ test('CLI list emits valid JSON', async () => {
   const parsed = JSON.parse(lines.join('\n'));
   assert.ok(parsed.some((agent) => agent.name === 'codex'));
 });
+
 
 
 
