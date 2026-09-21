@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+- Automatically launch Pi through `winpty` in Git Bash / MSYS when direct Pi output is unavailable.
+
 ## 0.5.2
 
 - Fixed agent output compatibility in Git Bash / MSYS by launching inherited interactive agents through the active bash shell instead of npm's `.cmd` shim.

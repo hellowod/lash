@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { AgentRegistry, validateConfig } from '../src/agents.js';
-import { launchTarget, parseArgv, runAgent, runCli } from '../src/cli.js';
+import { inheritedMsysWinpty, launchTarget, parseArgv, runAgent, runCli } from '../src/cli.js';
 
 async function temporaryFiles() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'lash-test-'));
@@ -191,6 +191,46 @@ test('runAgent keeps Git Bash launches in the inherited MSYS shell', async () =>
     else process.env.MSYSTEM = previousMsystem;
     if (previousShell === undefined) delete process.env.SHELL;
     else process.env.SHELL = previousShell;
+  }
+});
+
+test('Git Bash Pi launches resolve through winpty', async () => {
+  if (process.platform !== 'win32') return;
+
+  const gitBin = 'C:/Program Files/Git/usr/bin';
+  const shell = `${gitBin}/bash.exe`;
+  try {
+    await fs.access(`${gitBin}/winpty.exe`);
+    await fs.access(shell);
+  } catch {
+    return;
+  }
+
+  const previousMsystem = process.env.MSYSTEM;
+  const previousShell = process.env.SHELL;
+  const previousPath = process.env.PATH;
+  process.env.MSYSTEM = 'MINGW64';
+  process.env.SHELL = shell;
+  process.env.PATH = `${gitBin}${path.delimiter}${process.env.PATH}`;
+  try {
+    const agent = {
+      command: process.execPath,
+      args: [],
+      interactiveArgs: [],
+      env: {},
+      session: { provider: 'pi' },
+    };
+    const target = launchTarget(agent, ['-e', 'process.exit(42)']);
+    assert.deepEqual(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: true }), {
+      command: path.join(gitBin, 'winpty.exe'),
+      args: [process.execPath, '-e', 'process.exit(42)'],
+    });
+  } finally {
+    if (previousMsystem === undefined) delete process.env.MSYSTEM;
+    else process.env.MSYSTEM = previousMsystem;
+    if (previousShell === undefined) delete process.env.SHELL;
+    else process.env.SHELL = previousShell;
+    process.env.PATH = previousPath;
   }
 });
 

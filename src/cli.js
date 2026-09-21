@@ -356,6 +356,44 @@ export function launchTarget(agent, taskArgs, launchMode = 'run', session) {
   };
 }
 
+function resolveWindowsExecutable(command, extensions) {
+  const hasDirectory = /[\\/]/.test(command);
+  const base = hasDirectory ? path.resolve(command) : command;
+  const explicitExtension = path.extname(base).toLowerCase();
+  const candidates = ['.exe', '.cmd', '.bat'].includes(explicitExtension)
+    ? [base]
+    : extensions.map((extension) => base + extension);
+
+  for (const directory of process.env.PATH.split(path.delimiter)) {
+    if (directory === '') continue;
+    for (const candidate of candidates) {
+      const resolved = hasDirectory ? candidate : path.join(directory, candidate);
+      try {
+        if (fs.statSync(resolved).isFile()) return resolved;
+      } catch {
+        // Try the next PATH entry or extension.
+      }
+    }
+  }
+  return undefined;
+}
+
+export function inheritedMsysWinpty(agent, target, stdio, stdout = process.stdout) {
+  if (
+    process.platform !== 'win32'
+    || stdio !== 'inherit'
+    || process.env.MSYSTEM === undefined
+    || agent.session?.provider !== 'pi'
+    || stdout?.isTTY !== true
+    || process.env.LASH_NO_WINPTY === '1'
+  ) return undefined;
+
+  const winpty = resolveWindowsExecutable('winpty', ['.exe']);
+  const command = resolveWindowsExecutable(target.command, ['.exe', '.cmd', '.bat']);
+  if (winpty === undefined || command === undefined) return undefined;
+  return { command: winpty, args: [command, ...target.args] };
+}
+
 function inheritedMsysShell(stdio) {
   if (process.platform !== 'win32' || stdio !== 'inherit' || process.env.MSYSTEM === undefined) return undefined;
 
@@ -370,21 +408,23 @@ function inheritedMsysShell(stdio) {
 
 export function runAgent(agent, taskArgs, { cwd = process.cwd(), stdio = 'inherit', launchMode = 'run', session } = {}) {
   const target = launchTarget(agent, taskArgs, launchMode, session);
-  const msysShell = inheritedMsysShell(stdio);
+  const winpty = inheritedMsysWinpty(agent, target, stdio);
+  const msysShell = winpty === undefined ? inheritedMsysShell(stdio) : undefined;
 
-  // npm's Unix launchers work more reliably than their .cmd counterparts when a
-  // Git Bash/MSYS terminal is inherited. Using exec preserves argument boundaries.
-  const child = msysShell !== undefined
-    ? spawn(msysShell, ['-lc', 'exec "$@"', '--', target.command, ...target.args], {
-      cwd: agent.cwd ?? cwd,
-      env: { ...process.env, ...agent.env },
-      stdio,
-    })
-    : spawn(target.command, [...target.args], {
-      cwd: agent.cwd ?? cwd,
-      env: { ...process.env, ...agent.env },
-      stdio,
-    });
+  // Pi's Node CLI can fail to attach its console when Git Bash's MSYS terminal
+  // is inherited. winpty provides the Windows console bridge that Pi expects.
+  // Other agents keep using npm's Unix launcher through the inherited bash.
+  const launch = winpty ?? (msysShell !== undefined
+    ? {
+      command: msysShell,
+      args: ['-lc', 'exec "$@"', '--', target.command, ...target.args],
+    }
+    : { command: target.command, args: [...target.args] });
+  const child = spawn(launch.command, launch.args, {
+    cwd: agent.cwd ?? cwd,
+    env: { ...process.env, ...agent.env },
+    stdio,
+  });
 
   return new Promise((resolve, reject) => {
     child.once('error', reject);
