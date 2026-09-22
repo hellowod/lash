@@ -356,16 +356,26 @@ export function launchTarget(agent, taskArgs, launchMode = 'run', session) {
   };
 }
 
+function normalizeMsysPath(value) {
+  const drivePath = /^\/([a-z])\/(.*)$/i.exec(value);
+  if (drivePath !== null) return `${drivePath[1].toUpperCase()}:/${drivePath[2]}`;
+  return value;
+}
+
 function resolveWindowsExecutable(command, extensions) {
-  const hasDirectory = /[\\/]/.test(command);
-  const base = hasDirectory ? path.resolve(command) : command;
+  const normalizedCommand = normalizeMsysPath(command);
+  const hasDirectory = /[\\/]/.test(normalizedCommand);
+  const base = hasDirectory ? path.resolve(normalizedCommand) : normalizedCommand;
   const explicitExtension = path.extname(base).toLowerCase();
   const candidates = ['.exe', '.cmd', '.bat'].includes(explicitExtension)
     ? [base]
     : extensions.map((extension) => base + extension);
 
-  for (const directory of process.env.PATH.split(path.delimiter)) {
-    if (directory === '') continue;
+  const searchPath = process.env.PATH ?? '';
+  const delimiter = searchPath.includes(';') ? ';' : ':';
+  for (const rawDirectory of searchPath.split(delimiter)) {
+    if (rawDirectory === '') continue;
+    const directory = normalizeMsysPath(rawDirectory);
     for (const candidate of candidates) {
       const resolved = hasDirectory ? candidate : path.join(directory, candidate);
       try {
@@ -384,7 +394,7 @@ export function inheritedMsysWinpty(agent, target, stdio, stdout = process.stdou
     || stdio !== 'inherit'
     || process.env.MSYSTEM === undefined
     || agent.session?.provider !== 'pi'
-    || stdout?.isTTY !== true
+    || (stdout?.isTTY !== true && process.env.TERM_PROGRAM !== 'mintty')
     || process.env.LASH_NO_WINPTY === '1'
   ) return undefined;
 

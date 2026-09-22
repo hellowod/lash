@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.4
+
+- Fixed automatic Pi `winpty` bridging in an actual Mintty Git Bash terminal, where Node does not report stdout as a TTY.
+- Fixed executable lookup for Git Bash PATH entries using MSYS-style drive paths.
+
 ## 0.5.3
 
 - Automatically launch Pi through `winpty` in Git Bash / MSYS when direct Pi output is unavailable.

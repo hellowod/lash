@@ -209,9 +209,11 @@ test('Git Bash Pi launches resolve through winpty', async () => {
   const previousMsystem = process.env.MSYSTEM;
   const previousShell = process.env.SHELL;
   const previousPath = process.env.PATH;
+  const previousTermProgram = process.env.TERM_PROGRAM;
   process.env.MSYSTEM = 'MINGW64';
   process.env.SHELL = shell;
-  process.env.PATH = `${gitBin}${path.delimiter}${process.env.PATH}`;
+  process.env.PATH = '/c/Program Files/Git/usr/bin';
+  process.env.TERM_PROGRAM = 'mintty';
   try {
     const agent = {
       command: process.execPath,
@@ -221,16 +223,19 @@ test('Git Bash Pi launches resolve through winpty', async () => {
       session: { provider: 'pi' },
     };
     const target = launchTarget(agent, ['-e', 'process.exit(42)']);
-    assert.deepEqual(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: true }), {
+    assert.deepEqual(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: false }), {
       command: path.join(gitBin, 'winpty.exe'),
       args: [process.execPath, '-e', 'process.exit(42)'],
     });
+    assert.equal(inheritedMsysWinpty(agent, target, 'pipe', { isTTY: false }), undefined);
   } finally {
     if (previousMsystem === undefined) delete process.env.MSYSTEM;
     else process.env.MSYSTEM = previousMsystem;
     if (previousShell === undefined) delete process.env.SHELL;
     else process.env.SHELL = previousShell;
     process.env.PATH = previousPath;
+    if (previousTermProgram === undefined) delete process.env.TERM_PROGRAM;
+    else process.env.TERM_PROGRAM = previousTermProgram;
   }
 });
 
