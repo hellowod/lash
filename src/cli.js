@@ -388,15 +388,40 @@ function resolveWindowsExecutable(command, extensions) {
   return undefined;
 }
 
+function isMinttyPty() {
+  // mintty attaches a named pipe rather than a Windows console, so Node reports
+  // stdout.isTTY === false even while a person watches an interactive terminal.
+  // TERM_PROGRAM is mintty's own marker; TERM alone is too weak because CI shells
+  // and piped Git Bash runs also export xterm and would make winpty abort.
+  return process.env.TERM_PROGRAM === 'mintty';
+}
+
+function isRedirectedFile(stdout) {
+  const fd = stdout?.fd;
+  if (fd === undefined) return false;
+  try {
+    return fs.fstatSync(fd).isFile();
+  } catch {
+    return false;
+  }
+}
+
 export function inheritedMsysWinpty(agent, target, stdio, stdout = process.stdout) {
   if (
     process.platform !== 'win32'
     || stdio !== 'inherit'
     || process.env.MSYSTEM === undefined
-    || agent.session?.provider !== 'pi'
-    || (stdout?.isTTY !== true && process.env.TERM_PROGRAM !== 'mintty')
     || process.env.LASH_NO_WINPTY === '1'
   ) return undefined;
+
+  // Pi is the known casualty; LASH_WINPTY=1 opts any agent into the bridge.
+  // A genuine console needs none of this, and winpty flattens some UTF-8 output.
+  if (process.env.LASH_WINPTY !== '1') {
+    if (agent.session?.provider !== 'pi') return undefined;
+    if (stdout?.isTTY === true) return undefined;
+    if (!isMinttyPty()) return undefined;
+    if (isRedirectedFile(stdout)) return undefined;
+  }
 
   const winpty = resolveWindowsExecutable('winpty', ['.exe']);
   const command = resolveWindowsExecutable(target.command, ['.exe', '.cmd', '.bat']);
@@ -421,9 +446,8 @@ export function runAgent(agent, taskArgs, { cwd = process.cwd(), stdio = 'inheri
   const winpty = inheritedMsysWinpty(agent, target, stdio);
   const msysShell = winpty === undefined ? inheritedMsysShell(stdio) : undefined;
 
-  // Pi's Node CLI can fail to attach its console when Git Bash's MSYS terminal
-  // is inherited. winpty provides the Windows console bridge that Pi expects.
-  // Other agents keep using npm's Unix launcher through the inherited bash.
+  // Pi blocks on console setup when it inherits mintty's pipe, so bridge it with
+  // winpty. Other agents keep using npm's Unix launcher through inherited bash.
   const launch = winpty ?? (msysShell !== undefined
     ? {
       command: msysShell,

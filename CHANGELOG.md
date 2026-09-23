@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.5
+
+- Detect mintty through `TERM_PROGRAM` so the Pi `winpty` bridge works in a real Git Bash window, where Node cannot see the pty as a TTY.
+- Leave the bridge off for a genuine console, a file redirect, or a piped Git Bash run, where `winpty` would abort with "stdout is not a tty".
+- Add `LASH_WINPTY=1` to opt any agent into the bridge.
+
 ## 0.5.4
 
 - Fixed automatic Pi `winpty` bridging in an actual Mintty Git Bash terminal, where Node does not report stdout as a TTY.

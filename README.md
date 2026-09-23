@@ -290,7 +290,7 @@ console.log(registry.resolve('codex'));
 
 ## 设计边界
 
-`lash` 不包裹、不截获、不改写智能体输出。任务参数会原样追加到目标命令后面，进程直接继承当前终端，所以交互模式、颜色、进度和退出码都能正常工作。Codex 的持续对话使用原生 `--no-alt-screen` 模式，保留滚动历史并展示原生颜色；一次性任务仍强制 `--color never`。Windows 上的 `.cmd` / `.bat` 启动由 `cross-spawn` 处理；在 Git Bash / MSYS 中，lash 会优先复用继承的 bash 环境；Pi 会自动通过 `winpty` 桥接 Windows Console，避免终端无输出。设置 `LASH_NO_WINPTY=1` 可禁用该桥接。
+`lash` 不包裹、不截获、不改写智能体输出。任务参数会原样追加到目标命令后面，进程直接继承当前终端，所以交互模式、颜色、进度和退出码都能正常工作。Codex 的持续对话使用原生 `--no-alt-screen` 模式，保留滚动历史并展示原生颜色；一次性任务仍强制 `--color never`。Windows 上的 `.cmd` / `.bat` 启动由 `cross-spawn` 处理；在 Git Bash / MSYS 中，lash 会优先复用继承的 bash 环境；Pi 会自动通过 `winpty` 桥接 Windows Console，避免终端无输出；`LASH_NO_WINPTY=1` 可禁用该桥接，`LASH_WINPTY=1` 可让其他智能体也走同一桥接。
 
 ## 项目结构
 

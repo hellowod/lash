@@ -210,6 +210,7 @@ test('Git Bash Pi launches resolve through winpty', async () => {
   const previousShell = process.env.SHELL;
   const previousPath = process.env.PATH;
   const previousTermProgram = process.env.TERM_PROGRAM;
+  const previousTerm = process.env.TERM;
   process.env.MSYSTEM = 'MINGW64';
   process.env.SHELL = shell;
   process.env.PATH = '/c/Program Files/Git/usr/bin';
@@ -228,6 +229,21 @@ test('Git Bash Pi launches resolve through winpty', async () => {
       args: [process.execPath, '-e', 'process.exit(42)'],
     });
     assert.equal(inheritedMsysWinpty(agent, target, 'pipe', { isTTY: false }), undefined);
+    assert.equal(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: true }), undefined);
+
+    // TERM=xterm without mintty's own marker means a piped or CI shell, where
+    // winpty would abort with "stdout is not a tty". Stay on the plain launcher.
+    delete process.env.TERM_PROGRAM;
+    process.env.TERM = 'xterm-256color';
+    assert.equal(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: false }), undefined);
+
+    // An explicit opt-in still bridges regardless of terminal markers.
+    process.env.LASH_WINPTY = '1';
+    assert.deepEqual(inheritedMsysWinpty(agent, target, 'inherit', { isTTY: false }), {
+      command: path.join(gitBin, 'winpty.exe'),
+      args: [process.execPath, '-e', 'process.exit(42)'],
+    });
+    delete process.env.LASH_WINPTY;
   } finally {
     if (previousMsystem === undefined) delete process.env.MSYSTEM;
     else process.env.MSYSTEM = previousMsystem;
@@ -236,6 +252,8 @@ test('Git Bash Pi launches resolve through winpty', async () => {
     process.env.PATH = previousPath;
     if (previousTermProgram === undefined) delete process.env.TERM_PROGRAM;
     else process.env.TERM_PROGRAM = previousTermProgram;
+    if (previousTerm === undefined) delete process.env.TERM;
+    else process.env.TERM = previousTerm;
   }
 });
 
